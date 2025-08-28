@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>4‑Wall + Floor Tiles Estimator</title>
+  <style>
+    :root{
+      --bg:#0f172a; --card:#111827; --muted:#94a3b2; --text:#e5e7eb; --accent:#22d3ee; --accent-2:#a78bfa; --ring:#334155; --ok:#22c55e; --warn:#f59e0b; --bad:#ef4444;
+    }
+    html,body{height:100%}
+    body{font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; margin:0; padding:24px; background: radial-gradient(1200px 800px at 10% -10%, rgba(167,139,250,.15), transparent 60%), radial-gradient(1200px 800px at 110% 10%, rgba(34,211,238,.12), transparent 60%), var(--bg); color:var(--text)}
+    h1{font-size:28px; margin:0 0 4px; letter-spacing:.2px}
+    .sub{color:var(--muted); margin-bottom:20px}
+    .grid{display:grid; gap:16px}
+    .col-2{grid-template-columns: repeat(2, minmax(0,1fr));}
+    @media (max-width:900px){.col-2{grid-template-columns: 1fr;}}
+
+    .card{background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02)); border:1px solid var(--ring); border-radius:16px; padding:16px; box-shadow: 0 10px 30px rgba(0,0,0,.25)}
+    .card h2{font-size:18px; margin:0 0 12px}
+
+    label{display:flex; flex-direction:column; gap:6px; font-size:13px; color:var(--muted)}
+    .row{display:grid; gap:12px; grid-template-columns: repeat(4, minmax(0,1fr));}
+    .row.two{grid-template-columns: repeat(2, minmax(0,1fr));}
+    .row.three{grid-template-columns: repeat(3, minmax(0,1fr));}
+    @media (max-width:720px){.row{grid-template-columns: 1fr 1fr;}}
+
+    input{
+      background:#0b1220; color:var(--text); border:1px solid var(--ring); border-radius:12px;
+      padding:10px 12px; outline:none; font-size:14px; transition:.2s border-color, .2s box-shadow;
+    }
+    input:focus{border-color:var(--accent); box-shadow:0 0 0 4px rgba(34,211,238,.15)}
+
+    .btn{background:linear-gradient(90deg, var(--accent), var(--accent-2)); color:#0a0a0a; border:none; border-radius:999px; padding:10px 16px; font-weight:600; cursor:pointer}
+    .btn:active{transform:translateY(1px)}
+
+    .stats{display:grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap:12px}
+    @media (max-width:1100px){.stats{grid-template-columns: repeat(2, minmax(0,1fr));}}
+    @media (max-width:640px){.stats{grid-template-columns: 1fr;}}
+    .stat{background:#0b1220; border:1px solid var(--ring); border-radius:14px; padding:12px; display:grid; grid-template-columns: 1fr 1fr; gap:6px 10px}
+    .stat .k{font-size:12px; color:var(--muted)}
+    .stat .v{font-size:16px; font-weight:700; text-align:right}
+
+    .total{display:flex; align-items:center; justify-content:space-between; gap:12px}
+    .total .big{font-size:28px; font-weight:800}
+
+    .muted{color:var(--muted)}
+    .ok{color:var(--ok)} .bad{color:var(--bad)} .warn{color:var(--warn)}
+
+    footer{margin-top:22px; font-size:12px; color:var(--muted); text-align:center}
+  </style>
+</head>
+<body>
+    <h1 style="text-align: center;">Aandavar Enterprises</h1>
+  <h1>4‑Wall + Floor Tiles Estimator</h1>
+  <div class="sub">Opposite walls equal · Per‑wall + floor counts · Final total (with wastage)</div>
+
+  <div class="grid col-2">
+    <div class="card">
+      <h2>Room Dimensions (feet)</h2>
+      <div class="row three">
+        <label>Length – Front/Back (ft)
+          <input type="number" id="roomLen" step="0.01" value="15.7">
+        </label>
+        <label>Width – Left/Right (ft)
+          <input type="number" id="roomWid" step="0.01" value="12.0">
+        </label>
+        <label>Height (ft)
+          <input type="number" id="roomHei" step="0.01" value="9.3">
+        </label>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Wall Tile Size & Wastage</h2>
+      <div class="row three">
+        <label>Tile Width (ft)
+          <input type="number" id="tileW" step="0.01" value="2">
+        </label>
+        <label>Tile Height (ft)
+          <input type="number" id="tileH" step="0.01" value="2">
+        </label>
+        <label>Wastage (%)
+          <input type="number" id="wastePct" step="1" value="10">
+        </label>
+      </div>
+      <div class="muted" style="margin-top:8px">Wastage applied to all recommendations. Increase for diagonal/complex layouts.</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Floor Tile Size</h2>
+    <div class="row two">
+      <label>Floor Tile Width (ft)
+        <input type="number" id="floorW" step="0.01" value="2">
+      </label>
+      <label>Floor Tile Height (ft)
+        <input type="number" id="floorH" step="0.01" value="2">
+      </label>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Results</h2>
+    <div class="stats" id="stats"></div>
+    <div class="total" style="margin-top:14px">
+      <div>
+        <div class="muted">Total Recommended Tiles (4 walls + floor)</div>
+        <div class="big ok" id="totalRecommended">0</div>
+      </div>
+      <button class="btn" id="copySummary">Copy Summary</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Boxes Calculator</h2>
+    <div class="stats">
+      <div class="stat">
+        <div class="k">Walls – Boxes</div><div class="v" id="boxesWalls">—</div>
+        <div class="k">Rule applied</div><div class="v" id="boxesWallsRule">—</div>
+      </div>
+      <div class="stat">
+        <div class="k">Floor – Boxes</div><div class="v" id="boxesFloor">—</div>
+        <div class="k">Rule applied</div><div class="v" id="boxesFloorRule">—</div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    Counts assume full‑coverage grid layout. For half‑height tiling or openings (doors/windows), subtract those areas.
+  </footer>
+
+  <script>
+    // Elements
+    const el = (id) => document.getElementById(id);
+    const roomLen = el('roomLen');
+    const roomWid = el('roomWid');
+    const roomHei = el('roomHei');
+    const tileW = el('tileW');
+    const tileH = el('tileH');
+    const wastePct = el('wastePct');
+    const floorW = el('floorW');
+    const floorH = el('floorH');
+    const stats = el('stats');
+    const totalRecommended = el('totalRecommended');
+    const copyBtn = el('copySummary');
+    const boxesWalls = el('boxesWalls');
+    const boxesFloor = el('boxesFloor');
+    const boxesWallsRule = el('boxesWallsRule');
+    const boxesFloorRule = el('boxesFloorRule');
+
+    // Helpers
+    const ceilDiv = (a,b) => Math.ceil(a/b);
+    const floorDiv = (a,b) => Math.floor(a/b);
+    const fmt = (n) => Number(n).toLocaleString(undefined,{maximumFractionDigits:2});
+
+    // Box rules mapping by tile size (ft). Orientation-agnostic with small tolerance.
+    function piecesPerBox(w,h){
+      const a = Math.min(w,h), b = Math.max(w,h);
+      const close = (x,y) => Math.abs(x-y) < 1e-6;
+      if (close(a,1) && close(b,1.5)) return {ppb:6, label:'1×1.5 ft (6/box)'};
+      if (close(a,1) && close(b,2))   return {ppb:5, label:'2×1 ft (5/box)'};
+      if (close(a,2) && close(b,4))   return {ppb:2, label:'4×2 ft (2/box)'};
+      return {ppb:null, label:'No rule matched'};
+    }
+
+    function render(){
+      const L = parseFloat(roomLen.value)||0; // front/back length
+      const W = parseFloat(roomWid.value)||0; // left/right width
+      const H = parseFloat(roomHei.value)||0; // height
+      const tw = Math.max(0.0001, parseFloat(tileW.value)||0);
+      const th = Math.max(0.0001, parseFloat(tileH.value)||0);
+      const ftw = Math.max(0.0001, parseFloat(floorW.value)||0);
+      const fth = Math.max(0.0001, parseFloat(floorH.value)||0);
+      const waste = Math.max(0, parseFloat(wastePct.value)||0)/100;
+
+      // --- Walls (per single wall) ---
+      // Left/Right wall (W x H)
+      const lr_x_floor = floorDiv(W, tw), lr_y_floor = floorDiv(H, th);
+      const oneLR_fullTiles = lr_x_floor * lr_y_floor;
+      const lr_x_ceil = ceilDiv(W, tw), lr_y_ceil = ceilDiv(H, th);
+      const oneLR_coverTiles = lr_x_ceil * lr_y_ceil;
+
+      // Front/Back wall (L x H)
+      const fb_x_floor = floorDiv(L, tw), fb_y_floor = floorDiv(H, th);
+      const oneFB_fullTiles = fb_x_floor * fb_y_floor;
+      const fb_x_ceil = ceilDiv(L, tw), fb_y_ceil = ceilDiv(H, th);
+      const oneFB_coverTiles = fb_x_ceil * fb_y_ceil;
+
+      const tileArea = tw * th;
+      const areaLR = W * H;
+      const areaFB = L * H;
+      const wasteLR_area = Math.max(0, areaLR - oneLR_fullTiles * tileArea);
+      const wasteFB_area = Math.max(0, areaFB - oneFB_fullTiles * tileArea);
+
+      const recLR = Math.ceil(oneLR_coverTiles * (1 + waste));
+      const recFB = Math.ceil(oneFB_coverTiles * (1 + waste));
+
+      // --- Floor (L x W) ---
+      const floor_x_floor = floorDiv(L, ftw), floor_y_floor = floorDiv(W, fth);
+      const floor_fullTiles = floor_x_floor * floor_y_floor;
+      const floor_x_ceil = ceilDiv(L, ftw), floor_y_ceil = ceilDiv(W, fth);
+      const floor_coverTiles = floor_x_ceil * floor_y_ceil;
+      const floorArea = L * W;
+      const floorTileArea = ftw * fth;
+      const floor_wasteArea = Math.max(0, floorArea - floor_fullTiles * floorTileArea);
+      const recFloor = Math.ceil(floor_coverTiles * (1 + waste));
+
+      // Totals
+      const total = recLR * 2 + recFB * 2 + recFloor;
+
+      // Boxes computation
+      const wallRule = piecesPerBox(tw, th);
+      const floorRule = piecesPerBox(ftw, fth);
+      const wallsRecommended = recLR * 2 + recFB * 2;
+      const wallBoxes = wallRule.ppb ? Math.ceil(wallsRecommended / wallRule.ppb) : null;
+      const floorBoxes = floorRule.ppb ? Math.ceil(recFloor / floorRule.ppb) : null;
+
+      // UI blocks
+      function wallCard(title, area, full, cover, wasteArea, rec){
+        return `
+          <div class="stat">
+            <div class="k">${title} area</div><div class="v">${fmt(area)} ft²</div>
+            <div class="k">Full tiles</div><div class="v">${full}</div>
+            <div class="k">Cover tiles</div><div class="v">${cover}</div>
+            <div class="k bad">Wastage (area)</div><div class="v bad">${fmt(wasteArea)} ft²</div>
+            <div class="k">Recommended (+${Math.round(waste*100)}%)</div><div class="v ok">${rec}</div>
+          </div>`;
+      }
+
+      function floorCard(){
+        return `
+          <div class="stat">
+            <div class="k">Floor area</div><div class="v">${fmt(floorArea)} ft²</div>
+            <div class="k">Full tiles</div><div class="v">${floor_fullTiles}</div>
+            <div class="k">Cover tiles</div><div class="v">${floor_coverTiles}</div>
+            <div class="k bad">Wastage (area)</div><div class="v bad">${fmt(floor_wasteArea)} ft²</div>
+            <div class="k">Recommended (+${Math.round(waste*100)}%)</div><div class="v ok">${recFloor}</div>
+          </div>`;
+      }
+
+      stats.innerHTML = [
+        wallCard('Left Wall (W×H)', areaLR, oneLR_fullTiles, oneLR_coverTiles, wasteLR_area, recLR),
+        wallCard('Right Wall (W×H)', areaLR, oneLR_fullTiles, oneLR_coverTiles, wasteLR_area, recLR),
+        wallCard('Front Wall (L×H)', areaFB, oneFB_fullTiles, oneFB_coverTiles, wasteFB_area, recFB),
+        wallCard('Back Wall (L×H)', areaFB, oneFB_fullTiles, oneFB_coverTiles, wasteFB_area, recFB),
+        floorCard()
+      ].join('');
+
+      totalRecommended.textContent = total.toLocaleString();
+
+      // Update boxes UI
+      boxesWalls.textContent = wallBoxes ?? '—';
+      boxesFloor.textContent = floorBoxes ?? '—';
+      boxesWallsRule.textContent = wallRule.label;
+      boxesFloorRule.textContent = floorRule.label;
+
+      // Copy summary
+      copyBtn.onclick = () => {
+        const summary = `Tiles Summary\n\n`+
+          `Left Wall recommended: ${recLR}\n`+
+          `Right Wall recommended: ${recLR}\n`+
+          `Front Wall recommended: ${recFB}\n`+
+          `Back Wall recommended: ${recFB}\n`+
+          `Floor recommended: ${recFloor}\n`+
+          `\nTOTAL: ${total}`;
+        navigator.clipboard.writeText(summary).then(()=>{
+          copyBtn.textContent = 'Copied!';
+          setTimeout(()=> copyBtn.textContent = 'Copy Summary', 1500);
+        });
+      };
+    }
+
+    [roomLen, roomWid, roomHei, tileW, tileH, floorW, floorH, wastePct].forEach(i=> i.addEventListener('input', render));
+    render();
+  </script>
+</body>
+</html>
