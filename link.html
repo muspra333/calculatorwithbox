@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Secure Page</title>
+  <style>
+    body {background:#111; color:#eee; font-family:sans-serif;}
+    .hidden {display:none;}
+  </style>
+</head>
+<body>
+  <h1>Protected App</h1>
+  <p>All code is inside one file, no extra CSS/JS files.</p>
+
+  <script>
+    (function(){
+      // Example secure JS
+      document.body.insertAdjacentHTML('beforeend', "<p>JS is bundled inside</p>");
+    })();
+  </script>
+</body>
+</html>
