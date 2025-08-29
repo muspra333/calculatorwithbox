@@ -161,6 +161,16 @@
       if (close(a,1) && close(b,1.5)) return {ppb:6, label:'1×1.5 ft (6/box)'};
       if (close(a,1) && close(b,2))   return {ppb:5, label:'2×1 ft (5/box)'};
       if (close(a,2) && close(b,4))   return {ppb:2, label:'4×2 ft (2/box)'};
+      if (close(a,12/12) && close(b,18/12)) return {ppb:6, label:'18×12 in (6/box)'};   // 1.5×1 ft
+  if (close(a,1) && close(b,1))         return {ppb:8, label:'1×1 ft (8/box)'};
+  if (close(a,12/12) && close(b,12/12)) return {ppb:8, label:'12×12 in (8/box)'};   // 1×1 ft
+  if (close(a,24/12) && close(b,12/12)) return {ppb:5, label:'24×12 in (5/box)'};   // 2×1 ft
+  if (close(a,16/12) && close(b,16/12)) return {ppb:5, label:'16×16 in (5/box)'};   // 1.33×1.33 ft
+  if (close(a,2) && close(b,2))         return {ppb:4, label:'2×2 ft (4/box)'};
+  if (close(a,2.75) && close(b,5.5))    return {ppb:2, label:'2.75×5.5 ft (2/box)'};
+  if (close(a,4) && close(b,6))         return {ppb:2, label:'6×4 ft (2/box)'};
+  if (close(a,80/12) && close(b,240/12))return {ppb:1, label:'80×240 in (1/box)'};  // ~6.67×20 ft
+
       return {ppb:null, label:'No rule matched'};
     }
 
@@ -274,5 +284,167 @@
     [roomLen, roomWid, roomHei, tileW, tileH, floorW, floorH, wastePct].forEach(i=> i.addEventListener('input', render));
     render();
   </script>
+  <!-- Put this near the end of <body> or in an external JS file -->
+<script>
+/*
+  Protection deterrent for UI:
+  - disable selection, right-click, copy/paste keyboard shortcuts
+  - detect PrintScreen key and briefly cover content with an overlay
+  - detect devtools open-ish via timing heuristic and blur content (not foolproof)
+  - add a repeating, semi-transparent watermark containing a user identifier + timestamp
+  IMPORTANT: This is a deterrent only. Always move sensitive logic/data to the server.
+*/
+
+(function secureDeterrent(window, document){
+  const USER_ID = 'user@example.com'; // <-- replace dynamically from server with actual user identity
+  const WATERMARK_UPDATE_MS = 10_000; // watermark refresh (changes timestamp to discourage screenshots)
+  const DEVTOOLS_THRESHOLD_MS = 100; // heuristic timing threshold for devtools check
+
+  // --- UI / CSS injection ---
+  const css = `
+    html,body { -webkit-user-select:none; -ms-user-select:none; user-select:none; }
+    * { -webkit-touch-callout:none; -webkit-user-drag:none; }
+    .sd-overlay { position:fixed; inset:0; background:rgba(6,6,6,0.75); z-index:999999; display:flex; align-items:center; justify-content:center; color:#fff; font-size:20px; }
+    .sd-watermark {
+      pointer-events:none;
+      position:fixed;
+      inset:0;
+      z-index:999998;
+      mix-blend-mode:normal;
+      opacity:0.12;
+      background-image: repeating-linear-gradient(
+        25deg,
+        rgba(255,255,255,0.08) 0 1px,
+        transparent 1px 120px
+      );
+      display:block;
+    }
+    .sd-watermark .sd-wm-text {
+      position:absolute;
+      transform:rotate(-25deg);
+      left:-30%;
+      top:20%;
+      font-size:18px;
+      font-weight:700;
+      color:rgba(255,255,255,0.14);
+      letter-spacing:1px;
+      white-space:nowrap;
+    }
+  `;
+  const style = document.createElement('style');
+  style.appendChild(document.createTextNode(css));
+  document.head.appendChild(style);
+
+  // --- watermark creation ---
+  function makeWatermark(userId){
+    let node = document.querySelector('.sd-watermark');
+    if (node) node.remove();
+
+    node = document.createElement('div');
+    node.className = 'sd-watermark';
+    const txt = document.createElement('div');
+    txt.className = 'sd-wm-text';
+    txt.textContent = `${userId} • ${new Date().toLocaleString()}`;
+    // create many clones to fill the screen for stronger deterrent
+    for(let i=0;i<10;i++){
+      const clone = txt.cloneNode(true);
+      clone.style.top = (i*9) + '%';
+      clone.style.left = (-40 + i*14) + '%';
+      clone.style.opacity = (0.08 + (i%3)*0.02);
+      node.appendChild(clone);
+    }
+    document.body.appendChild(node);
+  }
+
+  // --- overlay (shown briefly on PrintScreen) ---
+  function showOverlay(msg = 'Screenshot detected — content temporarily hidden', ms = 1600){
+    if (document.querySelector('.sd-overlay')) return;
+    const ov = document.createElement('div');
+    ov.className = 'sd-overlay';
+    ov.textContent = msg;
+    document.body.appendChild(ov);
+    setTimeout(()=> ov.remove(), ms);
+  }
+
+  // --- disable copy, cut, paste, context menu, selection ---
+  function blockCopyPaste(){
+    ['copy','cut','paste'].forEach(ev => {
+      document.addEventListener(ev, e => e.preventDefault());
+    });
+    document.addEventListener('contextmenu', e => e.preventDefault());
+    // common keyboard combos
+    document.addEventListener('keydown', function(e){
+      // block Ctrl/Cmd + C, X, V, S, U, P, A
+      const mod = e.ctrlKey || e.metaKey;
+      if (mod && ['c','x','v','s','u','p','a'].includes((e.key||'').toLowerCase())){
+        e.preventDefault();
+        showOverlay('Action blocked', 900);
+      }
+      // block F12, Ctrl+Shift+I / J / C
+      if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && ['I','J','C'].includes((e.key||'').toUpperCase()))){
+        e.preventDefault();
+        showOverlay('DevTools blocked', 900);
+      }
+      // detect PrintScreen key
+      if (e.key === 'PrintScreen'){
+        showOverlay();
+      }
+    }, {passive:false});
+  }
+
+  // --- simple devtools-open heuristic (timing) ---
+  function detectDevtools(){
+    let last = performance.now();
+    function tick(){
+      const now = performance.now();
+      // if big jump in timer suggests the tab got paused or the console opened
+      if (now - last > DEVTOOLS_THRESHOLD_MS + 200){
+        // show overlay/blur sensitive content
+        document.documentElement.style.filter = 'blur(4px)';
+        showOverlay('Devtools or debugger activity detected', 1500);
+        setTimeout(()=> document.documentElement.style.filter = '', 1600);
+      }
+      last = now;
+    }
+    setInterval(tick, DEVTOOLS_THRESHOLD_MS);
+  }
+
+  // --- periodically refresh watermark to include fresh timestamp ---
+  function startWatermarkUpdater(userId){
+    makeWatermark(userId);
+    setInterval(()=> makeWatermark(userId), WATERMARK_UPDATE_MS);
+  }
+
+  // --- optional: try to detect screenshot API usage (not reliable) ---
+  function tryScreenCaptureAPICheck(){
+    // If the site uses navigator.mediaDevices.getDisplayMedia elsewhere for legitimate reasons,
+    // this check is not helpful. Keeping here as placeholder.
+    if (navigator.mediaDevices && navigator.mediaDevices.ondevicechange){
+      // no-op: can't reliably block OS-level screenshots
+    }
+  }
+
+  // Run protections
+  blockCopyPaste();
+  detectDevtools();
+  tryScreenCaptureAPICheck();
+  startWatermarkUpdater(USER_ID);
+
+  // expose a small API to toggle protections if needed
+  window.__sd = {
+    showOverlay,
+    refreshWatermark: () => makeWatermark(USER_ID),
+    disableProtection: ()=> {
+      // for debugging only; not recommended on prod
+      document.querySelectorAll('.sd-overlay, .sd-watermark').forEach(n=>n.remove());
+      document.head.querySelectorAll('style').forEach(s=>{
+        if (s.textContent.indexOf('.sd-watermark')>-1) s.remove();
+      });
+      document.removeEventListener('keydown', ()=>{});
+    }
+  };
+})(window, document);
+</script>
+
 </body>
 </html>
